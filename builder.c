@@ -1,6 +1,6 @@
 #include <yed/plugin.h>
 
-static yed_plugin        *Self;
+static yed_plugin        *Self
 static yed_event_handler  pump_handler;
 static yed_event_handler  style_handler;
 static yed_event_handler  row_handler;
@@ -122,8 +122,8 @@ static void notif_start(void) {
     char              *third_line;
     char               test_buff[256];
     int                line_len;
+    yed_attrs          attrs;
     int                side_padding;
-    yed_attrs          inv;
     char               line_buff[512];
     char              *line;
     int                i;
@@ -140,24 +140,20 @@ static void notif_start(void) {
     line_len      = MAX(strlen(test_buff), strlen(third_line));
     side_padding  = 2;
     line_len     += 2 * side_padding;
-
-    inv             = yed_active_style_get_active();
-    inv.flags      |= ATTR_INVERSE;
+    
+    attrs = yed_parse_attrs(build_failed
+                                ? "&red.fg &active.bg swap"
+                                : "&green.fg &active.bg swap");
 
     line         = test_buff;
     line_buff[0] = 0;
     for (i = 0; i < side_padding; i += 1) { strcat(line_buff, " "); }
     strcat(line_buff, line);
     for (i = 0; i < line_len - side_padding - strlen(line); i += 1) { strcat(line_buff, " "); }
-    if ( yed_var_is_truthy("builder-popup-rg") ) {
-        yed_attrs box_color;
-        box_color.flags = ATTR_16;
-        box_color.bg = build_failed ? ATTR_16_RED : ATTR_16_GREEN;
-        box_color.fg = ATTR_16_BLACK;
-
+    if (yed_var_is_truthy("builder-popup-rg")) {
         dd = yed_direct_draw(ys->term_rows - 2 - 3/* 2 */,
                                 ys->term_cols - line_len,
-                                box_color,
+                                attrs,
                                 line_buff);
     }else{
         dd = yed_direct_draw_style(ys->term_rows - 2 - 3/* 2 */,
@@ -172,15 +168,10 @@ static void notif_start(void) {
     for (i = 0; i < side_padding; i += 1) { strcat(line_buff, " "); }
     strcat(line_buff, line);
     for (i = 0; i < line_len - side_padding - strlen(line); i += 1) { strcat(line_buff, " "); }
-    if ( yed_var_is_truthy("builder-popup-rg") ) {
-        yed_attrs box_color;
-        box_color.flags = ATTR_16;
-        box_color.bg = build_failed ? ATTR_16_RED : ATTR_16_GREEN;
-        box_color.fg = ATTR_16_BLACK;
-
+    if (yed_var_is_truthy("builder-popup-rg")) {
         dd = yed_direct_draw(ys->term_rows - 2 - 2/* 3 */,
                                 ys->term_cols - line_len,
-                                box_color,
+                                attrs,
                                 line_buff);
     }else{
         dd = yed_direct_draw_style(ys->term_rows - 2 - 2/* 3 */,
@@ -195,15 +186,10 @@ static void notif_start(void) {
     for (i = 0; i < side_padding; i += 1) { strcat(line_buff, " "); }
     strcat(line_buff, line);
     for (i = 0; i < line_len - side_padding - strlen(line); i += 1) { strcat(line_buff, " "); }
-    if ( yed_var_is_truthy("builder-popup-rg") ) {
-        yed_attrs box_color;
-        box_color.flags = ATTR_16;
-        box_color.bg = build_failed ? ATTR_16_RED : ATTR_16_GREEN;
-        box_color.fg = ATTR_16_BLACK;
-
+    if (yed_var_is_truthy("builder-popup-rg")) {
         dd = yed_direct_draw(ys->term_rows - 2 - 1/* 4 */,
                                 ys->term_cols - line_len,
-                                box_color,
+                                attrs,
                                 line_buff);
     }else{
         dd = yed_direct_draw_style(ys->term_rows - 2 - 1/* 4 */,
@@ -292,29 +278,23 @@ static void builder_report(void) {
 }
 
 static yed_attrs get_err_attrs(void) {
-
-    yed_attrs a;
     yed_attrs active;
-    yed_attrs attn;
+    yed_attrs a;
+    yed_attrs red;
     float     brightness;
 
     active = yed_active_style_get_active();
 
     a = active;
 
-    if (a.flags & ATTR_RGB) {
+    if (ATTR_FG_KIND(a.flags) == ATTR_KIND_RGB) {
+        red        = yed_active_style_get_red();
         brightness = ((RGB_32_r(active.bg) + RGB_32_g(active.bg) + RGB_32_b(active.bg)) / 3) / 255.0f;
-
-        a.bg = RGB_32(0x7f + (u32)(brightness * 0x7f),
-                        0x0  + (u32)(brightness * 0x7f),
-                        0x0  + (u32)(brightness * 0x7f));
+        a.bg       = RGB_32(RGB_32_r(red.fg) / 2 + (u32)(brightness * 0x7f),
+                            RGB_32_g(red.fg) / 2 + (u32)(brightness * 0x7f),
+                            RGB_32_b(red.fg) / 2 + (u32)(brightness * 0x7f));
     } else {
-        attn    = yed_active_style_get_attention();
-        a.flags = attn.flags & ~(ATTR_16_LIGHT_FG | ATTR_16_LIGHT_BG | ATTR_INVERSE);
-        if (attn.flags & ATTR_16_LIGHT_FG) {
-            a.flags |= ATTR_16_LIGHT_BG;
-        }
-        a.bg = attn.fg;
+        a = yed_parse_attrs("&active.bg &attention.fg swap");
     }
 
     return a;
