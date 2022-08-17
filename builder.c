@@ -1,6 +1,6 @@
 #include <yed/plugin.h>
 
-static yed_plugin        *Self
+static yed_plugin        *Self;
 static yed_event_handler  pump_handler;
 static yed_event_handler  style_handler;
 static yed_event_handler  row_handler;
@@ -140,7 +140,7 @@ static void notif_start(void) {
     line_len      = MAX(strlen(test_buff), strlen(third_line));
     side_padding  = 2;
     line_len     += 2 * side_padding;
-    
+
     attrs = yed_parse_attrs(build_failed
                                 ? "&red.fg &active.bg swap"
                                 : "&green.fg &active.bg swap");
