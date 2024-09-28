@@ -118,6 +118,58 @@ static void builder_unload(yed_plugin *self) {
     builder_cleanup();
 }
 
+static yed_attrs get_err_attrs(void) {
+    yed_attrs a;
+    yed_attrs red;
+    float     brightness;
+
+    a = yed_active_style_get_active();
+
+    if (a.bg == 0) {
+        /* The user is likely using style_term_bg... use the complement of the fg. */
+        a.bg = 0xffffff - a.fg;
+        ATTR_SET_BG_KIND(a.flags, ATTR_KIND_RGB);
+    }
+
+    if (ATTR_FG_KIND(a.flags) == ATTR_KIND_RGB) {
+        red        = yed_active_style_get_red();
+        brightness = ((RGB_32_r(a.bg) + RGB_32_g(a.bg) + RGB_32_b(a.bg)) / 3) / 255.0f;
+        a.bg       = RGB_32(RGB_32_r(red.fg) / 2 + (u32)(brightness * 0x7f),
+                            RGB_32_g(red.fg) / 2 + (u32)(brightness * 0x7f),
+                            RGB_32_b(red.fg) / 2 + (u32)(brightness * 0x7f));
+    } else {
+        a = yed_parse_attrs("&active.bg &red.fg swap");
+    }
+
+    return a;
+}
+
+static yed_attrs get_success_attrs(void) {
+    yed_attrs a;
+    yed_attrs green;
+    float     brightness;
+
+    a = yed_active_style_get_active();
+
+    if (a.bg == 0) {
+        /* The user is likely using style_term_bg... use the complement of the fg. */
+        a.bg = 0xffffff - a.fg;
+        ATTR_SET_BG_KIND(a.flags, ATTR_KIND_RGB);
+    }
+
+    if (ATTR_FG_KIND(a.flags) == ATTR_KIND_RGB) {
+        green        = yed_active_style_get_green();
+        brightness = ((RGB_32_r(a.bg) + RGB_32_g(a.bg) + RGB_32_b(a.bg)) / 3) / 255.0f;
+        a.bg       = RGB_32(RGB_32_r(green.fg) / 2 + (u32)(brightness * 0x7f),
+                            RGB_32_g(green.fg) / 2 + (u32)(brightness * 0x7f),
+                            RGB_32_b(green.fg) / 2 + (u32)(brightness * 0x7f));
+    } else {
+        a = yed_parse_attrs("&active.bg &green.fg swap");
+    }
+
+    return a;
+}
+
 static void notif_start(void) {
     char              *third_line;
     char               test_buff[256];
@@ -141,9 +193,9 @@ static void notif_start(void) {
     side_padding  = 2;
     line_len     += 2 * side_padding;
 
-    attrs = yed_parse_attrs(build_failed
-                                ? "&red.fg &active.bg swap"
-                                : "&green.fg &active.bg swap");
+    attrs = build_failed
+                ? get_err_attrs()
+                : get_success_attrs();
 
     line         = test_buff;
     line_buff[0] = 0;
@@ -155,7 +207,7 @@ static void notif_start(void) {
                                 ys->term_cols - line_len,
                                 attrs,
                                 line_buff);
-    }else{
+    } else{
         dd = yed_direct_draw_style(ys->term_rows - 2 - 3/* 2 */,
                                 ys->term_cols - line_len,
                                 STYLE_status_line,
@@ -275,29 +327,6 @@ static void builder_report(void) {
     }
 
     YEXE("builder-echo-status");
-}
-
-static yed_attrs get_err_attrs(void) {
-    yed_attrs active;
-    yed_attrs a;
-    yed_attrs red;
-    float     brightness;
-
-    active = yed_active_style_get_active();
-
-    a = active;
-
-    if (ATTR_FG_KIND(a.flags) == ATTR_KIND_RGB) {
-        red        = yed_active_style_get_red();
-        brightness = ((RGB_32_r(active.bg) + RGB_32_g(active.bg) + RGB_32_b(active.bg)) / 3) / 255.0f;
-        a.bg       = RGB_32(RGB_32_r(red.fg) / 2 + (u32)(brightness * 0x7f),
-                            RGB_32_g(red.fg) / 2 + (u32)(brightness * 0x7f),
-                            RGB_32_b(red.fg) / 2 + (u32)(brightness * 0x7f));
-    } else {
-        a = yed_parse_attrs("&active.bg &attention.fg swap");
-    }
-
-    return a;
 }
 
 static void builder_draw_error_message(int do_draw) {
